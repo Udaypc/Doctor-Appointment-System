@@ -20,5 +20,7 @@ public class PatientDto {
     @NotNull
     @Size(min = 10,max = 10)
     private long contact;
+
+    @NotNull
     private String password;
 }
