@@ -9,32 +9,39 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/patient")
 public class PatientController {
-    private PatientService patientService;
+    private final PatientService patientService;
 
     public PatientController(PatientService patientService) {
         this.patientService = patientService;
     }
 
     @GetMapping("/getPatientById")
-    public Patient getPatientById(@RequestParam long id){
+    public Patient getPatientById(@RequestParam long id) {
         return patientService.getPatientById(id);
     }
 
+    @GetMapping("/getPatientByEmail")
+    public ResponseEntity<?> getPatientByEmail(@RequestParam String email) {
+        return patientService.getPatientByEmail(email);
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile(@RequestHeader("username") String email) {
+        return patientService.getPatientByEmail(email);
+    }
 
     @PostMapping("/registerPatient")
-    public ResponseEntity<?> registerPatient(@RequestBody PatientDto patientDto){
+    public ResponseEntity<?> registerPatient(@RequestBody PatientDto patientDto) {
         return patientService.registerPatient(patientDto);
     }
 
     @PutMapping("/updatePatient")
-    public ResponseEntity<?> updatePatient(@RequestBody Patient patient){
+    public ResponseEntity<?> updatePatient(@RequestBody Patient patient) {
         return patientService.updatePatient(patient);
     }
 
     @DeleteMapping("/deletePatient")
-    public ResponseEntity<?> deletePatientById(@RequestParam("patient_id") Long patientId){
+    public ResponseEntity<?> deletePatientById(@RequestParam("patient_id") Long patientId) {
         return patientService.deletePatientById(patientId);
     }
-
-
 }

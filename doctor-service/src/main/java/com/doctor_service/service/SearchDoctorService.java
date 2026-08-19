@@ -6,7 +6,6 @@ import com.doctor_service.dto.Time_Slots_Dto;
 import com.doctor_service.entity.Doctor;
 import com.doctor_service.entity.DoctorAppointmentSchedule;
 import com.doctor_service.entity.Time_Slots;
-import com.doctor_service.repository.AreaRepository;
 import com.doctor_service.repository.DoctorRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,75 +20,141 @@ import java.util.Optional;
 @Service
 public class SearchDoctorService {
     private final DoctorRepository doctorRepository;
-    private AreaRepository areaRepository;
+    private final ReviewService reviewService;
 
-    public SearchDoctorService(DoctorRepository doctorRepository, AreaRepository areaRepository) {
+    public SearchDoctorService(DoctorRepository doctorRepository, ReviewService reviewService) {
         this.doctorRepository = doctorRepository;
-        this.areaRepository = areaRepository;
+        this.reviewService = reviewService;
     }
 
-    public ResponseEntity<?> searchDoctor(String specialization , String area){
-        //Fetching the doctors based on area and specialization
-        List<Doctor> doctors = doctorRepository.searchBySpecializationAndArea(specialization,area);
+    public ResponseEntity<?> searchDoctor(String specialization, String area) {
+        List<Doctor> doctors = doctorRepository.searchBySpecializationAndArea(specialization, area);
+        return new ResponseEntity<>(mapDoctorsToDto(doctors), HttpStatus.OK);
+    }
 
-        //Create a doctorDto list to store all doctors with valid date and valid time
-        List<DoctorDto> AllValidDoctors=new ArrayList<>();
+    public ResponseEntity<?> searchBySpecialization(String specialization) {
+        List<Doctor> doctors = doctorRepository.searchBySpecialization(specialization);
+        return new ResponseEntity<>(mapDoctorsToDto(doctors), HttpStatus.OK);
+    }
 
-        
-        for(Doctor doctor:doctors){
-            //Create a scheduleDtos to store all valid date 
-            List<DoctorAppointmentScheduleDto> scheduleDtos=new ArrayList<>();
-            // Fetching the doctorAppointmentSchedules to the every doctor
-            List<DoctorAppointmentSchedule> doctorAppointmentSchedules = doctor.getDoctorAppointmentSchedules();
-            for(DoctorAppointmentSchedule schedule :doctorAppointmentSchedules){
-                // Fetching the date to the every schedule
-                LocalDate date = schedule.getDate();
-                // Fetching the all time_slots to the every schedule
-                List<Time_Slots> timeSlots = schedule.getTime_Slots();
-                // Getting the current date
-                LocalDate nowDate = LocalDate.now();
-                // Checking whether the date is valid or not 
-                if(date.equals(nowDate) || date.isAfter(nowDate)){
-                    // Creating the doctorAppointmentSchedule to store the schedule info like date, id, all time_slots
-                    DoctorAppointmentScheduleDto doctorAppointmentScheduleDto=new DoctorAppointmentScheduleDto();
-                    // Setting the id 
-                    doctorAppointmentScheduleDto.setId(schedule.getId());
-                    // Setting the date 
-                    doctorAppointmentScheduleDto.setDate(schedule.getDate());
-                    // Creating timeSlotsDTOs to store all valid time
-                    List<Time_Slots_Dto> timeSlotsDTOs=new ArrayList<>();
-                    for(Time_Slots timeSlot:timeSlots){
-                        // Getting the current time
-                        LocalTime time=LocalTime.now();
-                        // Checking whether the time is valid or not 
-                        if(timeSlot.getTime().isAfter(time)||date.isAfter(nowDate)){
-                            Time_Slots_Dto time_slot=new Time_Slots_Dto();
-                            time_slot.setId(timeSlot.getId());
-                            time_slot.setTime(timeSlot.getTime());
-                            timeSlotsDTOs.add(time_slot);
-                        }
+    public ResponseEntity<?> searchByCity(String city) {
+        List<Doctor> doctors = doctorRepository.searchByCity(city);
+        return new ResponseEntity<>(mapDoctorsToDto(doctors), HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> searchBySpecializationAndCity(String specialization, String city) {
+        List<Doctor> doctors = doctorRepository.searchBySpecializationAndCity(specialization, city);
+        return new ResponseEntity<>(mapDoctorsToDto(doctors), HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAvailableSlots(long doctorId, LocalDate date) {
+        Optional<Doctor> optionalDoctor = doctorRepository.findById(doctorId);
+        if (optionalDoctor.isEmpty()) {
+            return new ResponseEntity<>("Doctor not found", HttpStatus.NOT_FOUND);
+        }
+        Doctor doctor = optionalDoctor.get();
+        LocalDate nowDate = LocalDate.now();
+        LocalTime nowTime = LocalTime.now();
+
+        List<Time_Slots_Dto> availableSlots = new ArrayList<>();
+        for (DoctorAppointmentSchedule schedule : doctor.getDoctorAppointmentSchedules()) {
+            if (schedule.getDate().equals(date)) {
+                for (Time_Slots slot : schedule.getTime_Slots()) {
+                    if (date.isAfter(nowDate) || slot.getTime().isAfter(nowTime)) {
+                        Time_Slots_Dto dto = new Time_Slots_Dto();
+                        dto.setId(slot.getId());
+                        dto.setTime(slot.getTime());
+                        availableSlots.add(dto);
                     }
-                    doctorAppointmentScheduleDto.setTime_Slots(timeSlotsDTOs);
-                    scheduleDtos.add(doctorAppointmentScheduleDto);
                 }
             }
-            
-            // Setting the doctor's details
-            DoctorDto doctorDto = getDoctorDto(doctor, scheduleDtos);
-
-            // Set the doctor to the list
-            AllValidDoctors.add(doctorDto);
-            
         }
-        return new ResponseEntity<>(AllValidDoctors, HttpStatus.OK);
+        return new ResponseEntity<>(availableSlots, HttpStatus.OK);
     }
 
-    private static DoctorDto getDoctorDto(Doctor doctor, List<DoctorAppointmentScheduleDto> scheduleDtos) {
-        DoctorDto doctorDto=new DoctorDto();
+    public ResponseEntity<?> getAllSpecializations() {
+        List<String> specializations = doctorRepository.findAllSpecializations();
+        return new ResponseEntity<>(specializations, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAllCities() {
+        List<String> cities = doctorRepository.findAllCities();
+        return new ResponseEntity<>(cities, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAreasByCity(String city) {
+        List<String> areas = doctorRepository.findAreasByCity(city);
+        return new ResponseEntity<>(areas, HttpStatus.OK);
+    }
+
+    public DoctorDto getById(long id) {
+        Optional<Doctor> byId = doctorRepository.findById(id);
+        if (byId.isEmpty()) {
+            return new DoctorDto();
+        }
+        Doctor doctor = byId.get();
+        List<DoctorAppointmentScheduleDto> scheduleDtos = buildScheduleDtos(doctor.getDoctorAppointmentSchedules());
+        return getDoctorDto(doctor, scheduleDtos);
+    }
+
+    public ResponseEntity<?> getByEmail(String email) {
+        Optional<Doctor> optionalDoctor = doctorRepository.findByEmail(email);
+        if (optionalDoctor.isEmpty()) {
+            return new ResponseEntity<>("Doctor not found", HttpStatus.NOT_FOUND);
+        }
+        Doctor doctor = optionalDoctor.get();
+        List<DoctorAppointmentScheduleDto> scheduleDtos = buildScheduleDtos(doctor.getDoctorAppointmentSchedules());
+        return new ResponseEntity<>(getDoctorDto(doctor, scheduleDtos), HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAllDoctor() {
+        List<Doctor> all = doctorRepository.findAll();
+        return new ResponseEntity<>(mapDoctorsToDto(all), HttpStatus.OK);
+    }
+
+    private List<DoctorDto> mapDoctorsToDto(List<Doctor> doctors) {
+        List<DoctorDto> result = new ArrayList<>();
+        for (Doctor doctor : doctors) {
+            List<DoctorAppointmentScheduleDto> scheduleDtos = buildScheduleDtos(doctor.getDoctorAppointmentSchedules());
+            result.add(getDoctorDto(doctor, scheduleDtos));
+        }
+        return result;
+    }
+
+    private List<DoctorAppointmentScheduleDto> buildScheduleDtos(List<DoctorAppointmentSchedule> schedules) {
+        List<DoctorAppointmentScheduleDto> scheduleDtos = new ArrayList<>();
+        LocalDate nowDate = LocalDate.now();
+
+        for (DoctorAppointmentSchedule schedule : schedules) {
+            LocalDate date = schedule.getDate();
+            if (date.equals(nowDate) || date.isAfter(nowDate)) {
+                DoctorAppointmentScheduleDto dto = new DoctorAppointmentScheduleDto();
+                dto.setId(schedule.getId());
+                dto.setDate(schedule.getDate());
+
+                List<Time_Slots_Dto> timeSlotsDTOs = new ArrayList<>();
+                for (Time_Slots timeSlot : schedule.getTime_Slots()) {
+                    LocalTime now = LocalTime.now();
+                    if (timeSlot.getTime().isAfter(now) || date.isAfter(nowDate)) {
+                        Time_Slots_Dto slotDto = new Time_Slots_Dto();
+                        slotDto.setId(timeSlot.getId());
+                        slotDto.setTime(timeSlot.getTime());
+                        timeSlotsDTOs.add(slotDto);
+                    }
+                }
+                dto.setTime_Slots(timeSlotsDTOs);
+                scheduleDtos.add(dto);
+            }
+        }
+        return scheduleDtos;
+    }
+
+    private DoctorDto getDoctorDto(Doctor doctor, List<DoctorAppointmentScheduleDto> scheduleDtos) {
+        DoctorDto doctorDto = new DoctorDto();
         doctorDto.setId(doctor.getId());
-        doctorDto.setArea(doctor.getArea().getName());
-        doctorDto.setCity(doctor.getCity().getName());
-        doctorDto.setState(doctor.getState().getName());
+        doctorDto.setArea(doctor.getArea() != null ? doctor.getArea().getName() : null);
+        doctorDto.setCity(doctor.getCity() != null ? doctor.getCity().getName() : null);
+        doctorDto.setState(doctor.getState() != null ? doctor.getState().getName() : null);
         doctorDto.setContact(doctor.getContact());
         doctorDto.setAddress(doctor.getAddress());
         doctorDto.setName(doctor.getName());
@@ -97,17 +162,12 @@ public class SearchDoctorService {
         doctorDto.setSpecialization(doctor.getSpecialization());
         doctorDto.setUrl(doctor.getUrl());
         doctorDto.setQualification(doctor.getQualification());
+        doctorDto.setEmail(doctor.getEmail());
         doctorDto.setDoctorAppointmentSchedules(scheduleDtos);
+        if (doctor.getId() != null) {
+            doctorDto.setAverageRating(reviewService.averageFor(doctor.getId()));
+            doctorDto.setReviewCount(reviewService.countFor(doctor.getId()));
+        }
         return doctorDto;
-    }
-
-    public Doctor getById(long id) {
-        Optional<Doctor> byId = doctorRepository.findById(id);
-        return byId.orElseGet(Doctor::new);
-    }
-
-    public ResponseEntity<?> getAllDoctor() {
-        List<Doctor> all = doctorRepository.findAll();
-        return  new ResponseEntity<>(all,HttpStatus.OK);
     }
 }

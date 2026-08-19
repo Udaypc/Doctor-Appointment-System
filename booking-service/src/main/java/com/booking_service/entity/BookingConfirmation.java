@@ -22,12 +22,18 @@ public class BookingConfirmation {
     @Column(name = "doctor_id")
     private long doctorId;
 
-    @Column(name="patient_id")
+    @Column(name = "patient_id")
     private long patientId;
 
     private String address;
     private LocalDate date;
     private LocalTime time;
-    private Boolean status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private BookingStatus status = BookingStatus.PENDING;
+
+    private String doctorName;
+    private String patientName;
+    private String specialization;
 }

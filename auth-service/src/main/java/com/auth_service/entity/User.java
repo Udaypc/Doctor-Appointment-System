@@ -18,4 +18,6 @@ public class User {
     private String email;
     private String password;
     private String role;
+    /** Patient ID or Doctor ID from the respective service */
+    private Long entityId;
 }
