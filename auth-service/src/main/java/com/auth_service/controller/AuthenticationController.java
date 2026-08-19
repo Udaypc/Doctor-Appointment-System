@@ -1,5 +1,6 @@
 package com.auth_service.controller;
 
+import com.auth_service.dto.LinkEntityRequest;
 import com.auth_service.dto.LoginDto;
 import com.auth_service.entity.User;
 import com.auth_service.service.AuthenticationService;
@@ -15,11 +16,17 @@ public class AuthenticationController {
     private final AuthenticationService authenticationService;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login( @RequestBody LoginDto loginDto){
+    public ResponseEntity<?> login(@RequestBody LoginDto loginDto) {
         return authenticationService.login(loginDto);
     }
+
     @PostMapping("/register")
-    public String registerUser(@RequestBody User user){
+    public ResponseEntity<String> registerUser(@RequestBody User user) {
         return authenticationService.register(user);
+    }
+
+    @PutMapping("/entity-id")
+    public ResponseEntity<?> linkEntityId(@RequestBody LinkEntityRequest request) {
+        return authenticationService.linkEntityId(request);
     }
 }

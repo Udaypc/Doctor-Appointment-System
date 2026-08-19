@@ -23,6 +23,8 @@ public class DoctorDto {
     private String state;
     private String city;
     private String area;
+    private Double averageRating;
+    private Long reviewCount;
     private List<DoctorAppointmentScheduleDto> doctorAppointmentSchedules = new ArrayList<>();
 
 }

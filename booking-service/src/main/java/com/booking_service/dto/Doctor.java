@@ -1,26 +1,23 @@
 package com.booking_service.dto;
 
-
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import jakarta.persistence.*;
-
 import java.util.ArrayList;
 import java.util.List;
 
 public class Doctor {
     private Long id;
     private String name;
+    private String email;
     private String specialization;
     private String qualification;
     private String contact;
     private Integer experience;
     private String url;
     private String address;
-    private State state;
-    private City city;
-    private Area area;
+    private String state;
+    private String city;
+    private String area;
     private List<DoctorAppointmentSchedule> doctorAppointmentSchedules = new ArrayList<>();
+
     public List<DoctorAppointmentSchedule> getDoctorAppointmentSchedules() {
         return doctorAppointmentSchedules;
     }
@@ -29,30 +26,29 @@ public class Doctor {
         this.doctorAppointmentSchedules = doctorAppointmentSchedules;
     }
 
-    public Area getArea() {
+    public String getArea() {
         return area;
     }
 
-    public void setArea(Area area) {
+    public void setArea(String area) {
         this.area = area;
     }
 
-    public City getCity() {
+    public String getCity() {
         return city;
     }
 
-    public void setCity(City city) {
+    public void setCity(String city) {
         this.city = city;
     }
 
-    public State getState() {
+    public String getState() {
         return state;
     }
 
-    public void setState(State state) {
+    public void setState(String state) {
         this.state = state;
     }
-
 
     public String getAddress() {
         return address;
@@ -108,6 +104,14 @@ public class Doctor {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public Long getId() {

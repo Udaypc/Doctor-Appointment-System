@@ -9,9 +9,12 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.http.HttpStatus;
 
 @Configuration
 @RequiredArgsConstructor
@@ -21,23 +24,25 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.
-                csrf(c->c.disable())
-                .authorizeHttpRequests(
-                        req->{
-                            req.requestMatchers("/api/v1/auth/**")
-                                    .permitAll()
-                                    .anyRequest()
-                                    .authenticated();
-                        }
-                ).authenticationProvider(authenticationProvider());
+        httpSecurity
+                .csrf(c -> c.disable())
+                .formLogin(f -> f.disable())
+                .httpBasic(h -> h.disable())
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(req -> req
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                )
+                .authenticationProvider(authenticationProvider());
         return httpSecurity.build();
     }
 
     @Bean
     AuthenticationProvider authenticationProvider(){
-        DaoAuthenticationProvider provider=new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailServiceForAuth);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailServiceForAuth);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
